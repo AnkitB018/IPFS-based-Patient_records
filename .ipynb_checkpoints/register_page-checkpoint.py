@@ -42,74 +42,170 @@ def save_users(users):
 
 # Function for layout
 def register_layout():
+    """
+    Register layout with floating info cards (left & right of register card).
+    """
+
+    #  Register Card (center)
+    form_card = dbc.Card(
+        dbc.CardBody(
+            [
+                html.Div(
+                    [
+                        html.H2("📝 Create Account", className="mb-1 fw-bold"),
+                        html.Div(
+                            "Join MedRecords and securely manage your blockchain-backed records.",
+                            className="text-muted mb-3",
+                        ),
+                    ],
+                    style={"textAlign": "left"},
+                ),
+
+                dbc.Label("Username", html_for="reg-username", className="small fw-semibold"),
+                dbc.Input(
+                    id="reg-username",
+                    type="text",
+                    placeholder="Enter username",
+                    className="mb-3",
+                ),
+
+                dbc.Label("Patient ID", html_for="reg-patient-id", className="small fw-semibold"),
+                dbc.Input(
+                    id="reg-patient-id",
+                    type="text",
+                    placeholder="Patient ID (only if patient)",
+                    className="mb-3",
+                ),
+
+                dbc.Label("Password", html_for="reg-password", className="small fw-semibold"),
+                dbc.Input(
+                    id="reg-password",
+                    type="password",
+                    placeholder="Enter password",
+                    className="mb-3",
+                ),
+
+                dbc.Button(
+                    "Register",
+                    id="register-button",
+                    color="success",
+                    className="w-100 mb-2",
+                ),
+
+                html.Div(id="register-message", className="text-danger text-center mb-2"),
+
+                dbc.Button(
+                    "Already have an account? Login",
+                    id="to-login",
+                    color="link",
+                    className="w-100",
+                    style={"textDecoration": "underline"},
+                ),
+            ]
+        ),
+        className="shadow-lg border-0 rounded-4 bg-white",
+        style={"padding": "20px"},
+    )
+
+    #  Left Info Card
+    left_info = dbc.Card(
+        dbc.CardBody(
+            [
+                html.H5("Why register?", className="fw-bold text-primary mb-3"),
+                dbc.ListGroup(
+                    [
+                        dbc.ListGroupItem("📂 Manage personal medical records"),
+                        dbc.ListGroupItem("🔑 Secure access anytime"),
+                    ],
+                    flush=True,
+                    className="small rounded-3 shadow-sm",
+                ),
+            ]
+        ),
+        className="shadow border-0 rounded-4 bg-light",
+        style={"padding": "15px"},
+    )
+
+    #  Right Info Card
+    right_info = dbc.Card(
+        dbc.CardBody(
+            [
+                html.H5("Benefits", className="fw-bold text-primary mb-3"),
+                dbc.ListGroup(
+                    [
+                        dbc.ListGroupItem("🌍 Decentralized IPFS storage"),
+                        dbc.ListGroupItem("⚡ Blockchain security"),
+                    ],
+                    flush=True,
+                    className="small rounded-3 shadow-sm",
+                ),
+                html.Div(
+                    [
+                        dbc.Badge("Privacy-first", color="secondary", className="me-2"),
+                        dbc.Badge("Blockchain", color="success", className="me-2"),
+                        dbc.Badge("IPFS", color="info"),
+                    ],
+                    className="d-flex gap-2 mt-3",
+                ),
+            ]
+        ),
+        className="shadow border-0 rounded-4 bg-light",
+        style={"padding": "15px"},
+    )
+
+    #  Outer Container
     return dbc.Container(
         [
             dbc.Row(
                 dbc.Col(
-                    dbc.Card(
-                        dbc.CardBody(
-                            [
-                                html.H2("📝 Register", className="text-center mb-4"),
-
-                                # Username
-                                dbc.Input(
-                                    id="reg-username",
-                                    type="text",
-                                    placeholder="Enter username",
-                                    className="mb-3"
-                                ),
-
-                                # Patient ID
-                                dbc.Input(
-                                    id="reg-patient-id",
-                                    type="text",
-                                    placeholder="Patient ID (only if patient)",
-                                    className="mb-3"
-                                ),
-
-                                # Password
-                                dbc.Input(
-                                    id="reg-password",
-                                    type="password",
-                                    placeholder="Enter password",
-                                    className="mb-3"
-                                ),
-
-                                # Register button
-                                dbc.Button(
-                                    "Register",
-                                    id="register-button",
-                                    color="success",
-                                    className="w-100 mb-2"
-                                ),
-
-                                # Register message
-                                html.Div(
-                                    id="register-message",
-                                    className="text-danger text-center mb-3"
-                                ),
-
-                                # Go to Login
-                                dbc.Button(
-                                    "Go to Login",
-                                    id="to-login",
-                                    color="secondary",
-                                    outline=True,
-                                    className="w-100"
-                                ),
-                            ]
-                        ),
-                        className="shadow-sm"
+                    html.Div(
+                        [
+                            html.H1("MedRecords", style={"fontWeight": "700", "color": "#0d6efd"}),
+                            html.Div(
+                                "Your secure gateway to blockchain + IPFS medical data",
+                                className="text-muted",
+                            ),
+                        ],
+                        style={"textAlign": "center", "paddingTop": "15px", "paddingBottom": "5px"},
                     ),
-                    width=12, md=6, lg=4
+                    width=12,
                 ),
-                className="justify-content-center mt-5"
-            )
+                className="justify-content-center mt-3 mb-1",
+            ),
+
+            # 🔹 Floating layout: Left - Center - Right
+            dbc.Row(
+                [
+                    dbc.Col(left_info, xs=12, md=3, lg=3, className="mb-4"),
+                    dbc.Col(form_card, xs=12, md=6, lg=4, className="mb-4"),
+                    dbc.Col(right_info, xs=12, md=3, lg=3, className="mb-4"),
+                ],
+                justify="center",
+                align="center",
+                className="mt-3",
+            ),
+
+            # Footer
+            dbc.Row(
+                dbc.Col(
+                    html.Div(
+                        [
+                            html.Span("Built with 💡 IPFS & Blockchain "),
+                        ],
+                        className="text-center text-muted small",
+                        style={"paddingTop": "10px", "paddingBottom": "30px"},
+                    ),
+                    width=12,
+                )
+            ),
         ],
-        fluid=True
+        fluid=True,
+        style={
+            "minHeight": "100vh",
+            "background": "linear-gradient(135deg, #e0f7fa 0%, #80deea 100%)",
+            "paddingTop": "10px",
+        },
     )
-
-
 
 
 # Function for wrapping callbacks

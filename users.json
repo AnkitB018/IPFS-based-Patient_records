@@ -1,0 +1,35 @@
+{
+    "Admin": {
+        "username": "Admin",
+        "password": "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918",
+        "role": "admin"
+    },
+    "Aritra": {
+        "username": "Aritra",
+        "password": "92d64f97f9c31816822d028c884ba0e87407a0b42c641e4f450a45fea97a87e1",
+        "role": "patient",
+        "name": "Aritra",
+        "patient_id": "A001"
+    },
+    "Test": {
+        "username": "Test",
+        "password": "test",
+        "role": "patient",
+        "patient_id": "A003"
+    },
+    "Admin01": {
+        "username": "Admin01",
+        "password": "test",
+        "role": "admin"
+    },
+    "Ankit": {
+        "password": "ankit",
+        "role": "patient",
+        "patient_id": "A004"
+    },
+    "Antro": {
+        "password": "TEST34",
+        "role": "patient",
+        "patient_id": "A005"
+    }
+}

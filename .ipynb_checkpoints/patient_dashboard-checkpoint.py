@@ -13,9 +13,9 @@ BLOCKCHAIN_FILE = "blockchain.json"
 USERS_FILE = "users.json"
 
 
-# -------------------------
+
+
 # Helper functions (kept behavior / keys same as before)
-# -------------------------
 def load_blockchain():
     try:
         with open(BLOCKCHAIN_FILE, "r") as f:
@@ -157,9 +157,9 @@ def get_patient_id_from_username(username):
     return None
 
 
-# -------------------------
+
+
 # Layout (improved styling, IDs unchanged)
-# -------------------------
 def layout(username=None):
     header_text = f"👤 Patient Dashboard — {username}" if username else "👤 Patient Dashboard"
 
@@ -257,9 +257,9 @@ def layout(username=None):
     })
 
 
-# -------------------------
+
+
 # Callbacks (register_patient_callbacks) — IDs & logic preserved
-# -------------------------
 def register_patient_callbacks(app):
     """
     Register callbacks on the provided Dash `app`.

@@ -91,7 +91,7 @@ def register_layout():
                     color="success",
                     className="w-100 mb-2",
                 ),
-
+    
                 html.Div(id="register-message", className="text-danger text-center mb-2"),
 
                 dbc.Button(
@@ -226,9 +226,38 @@ def register_callbacks(app):
         if username in users:
             return "Username already exists.", dash.no_update
 
-        # Determine role
-        role = "admin" if username.lower() == "admin" else "patient"
-        users[username] = {"password": password, "role": role, "patient_id": patient_id}
+        role = "patient"
+        users[username] = {"password": password, 
+                            "role": role, 
+                            "patient_id": patient_id, 
+
+                            #demographics
+                            "gender": "NA",
+                            "full_name": "NA",
+                            "gender": "NA",
+                            "date_of_birth": "NA",
+                            "blood_group": "NA",
+                           
+                            # physical stats
+                            "height": "NA",
+                            "weight": "NA",
+                            "bmi": "NA",
+                            "blood_pressure": "NA",
+                            "heart_rate": "NA",
+                        
+                            # medical history
+                            "allergies": "NA",
+                            "chronic_conditions": "NA",
+                            "current_medications": "NA",
+                            "past_surgeries": "NA",
+                            
+                            # contact
+                            "phone": "NA",
+                            "email": "NA",
+                            "address": "NA",
+                            "emergency_contact_name": "NA",
+                            "emergency_contact_phone": "NA"
+                          }
         save_users(users)
         return "Registration successful!", "/"
 

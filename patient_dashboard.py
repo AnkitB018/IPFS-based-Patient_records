@@ -15,7 +15,11 @@ USERS_FILE = "users.json"
 
 
 
-# Helper functions (kept behavior / keys same as before)
+
+
+
+
+# ---------------- Helper Functions ----------------
 def load_blockchain():
     try:
         with open(BLOCKCHAIN_FILE, "r") as f:
@@ -28,19 +32,14 @@ def load_blockchain():
 
 
 def fetch_from_ipfs(cid):
-    """
-    Fetch a metadata JSON stored under the given CID from IPFS.
-    Returns a list of dash/html elements (same behavior as before).
-    """
     try:
-        client = ipfshttpclient.connect()  # assumes daemon on 127.0.0.1:5001
+        client = ipfshttpclient.connect()
         raw_data = client.cat(cid)
         metadata = json.loads(raw_data.decode("utf-8"))
 
         layout = []
         layout.append(html.H5("📄 Metadata", style={"marginTop": "10px"}))
 
-        # keys to display (unchanged)
         keys = [
             "filename", "patient_name", "patient_id", "file_type", "timestamp",
             "disease", "description", "file-status", "next-appointment",
@@ -55,7 +54,6 @@ def fetch_from_ipfs(cid):
                     ], style={"marginBottom": "6px"})
                 )
 
-        # preview handling (unchanged behavior)
         filename = metadata.get("filename", "")
         ext = filename.lower().split(".")[-1] if filename else ""
         mime_map = {
@@ -101,10 +99,6 @@ def fetch_from_ipfs(cid):
 
 
 def get_patient_records(patient_id):
-    """
-    Read the blockchain file and return records that match patient_id.
-    (Keeps the same keys as your previous implementation.)
-    """
     chain = load_blockchain()
     records = []
     for block in chain:
@@ -121,7 +115,7 @@ def get_patient_records(patient_id):
                 "file_status": data.get("File Status", ""),
                 "block_index": block.get("index", -1)
             })
-    # sort by timestamp descending if timestamp exists (best-effort)
+
     def _ts_key(r):
         try:
             return datetime.strptime(r.get("timestamp", "").split(".")[0], "%Y-%m-%d %H:%M:%S")
@@ -132,22 +126,16 @@ def get_patient_records(patient_id):
 
 
 def get_patient_id_from_username(username):
-    """
-    Map username -> patient_id reading USERS_FILE (supports list or dict formats).
-    Returns None if not found.
-    """
     try:
         if not os.path.exists(USERS_FILE):
             return None
         with open(USERS_FILE, "r") as f:
             users = json.load(f)
-        # If dict keyed by username
         if isinstance(users, dict):
             u = users.get(username)
             if isinstance(u, dict):
                 return u.get("patient_id") or u.get("patient id") or u.get("patientID")
             return None
-        # If list of dicts
         if isinstance(users, list):
             for u in users:
                 if isinstance(u, dict) and u.get("username") == username:
@@ -159,11 +147,14 @@ def get_patient_id_from_username(username):
 
 
 
-# Layout (improved styling, IDs unchanged)
+
+
+
+
+# ---------------- Layout ----------------
 def layout(username=None):
     header_text = f"👤 Patient Dashboard — {username}" if username else "👤 Patient Dashboard"
 
-    # Left floating info (small)
     left_info = dbc.Card(
         dbc.CardBody([
             html.H6("Quick Info", className="fw-bold mb-2"),
@@ -176,43 +167,19 @@ def layout(username=None):
         style={"backgroundColor": "white"}
     )
 
-    # Center: main card area
-    main = dbc.Card(
-        dbc.CardBody([
-            # header row with patient id text is shown via separate element (kept id)
-            html.Div(id="patient-id-display"),  # kept for callback output
+    main = html.Div([
+        dcc.Tabs(
+            id="patient-tabs",
+            value="data",
+            children=[
+                dcc.Tab(label="📑 Data", value="data"),
+                dcc.Tab(label="👤 Profile", value="profile"),
+            ],
+            style={"marginBottom": "16px"}
+        ),
+        html.Div(id="tab-content")
+    ])
 
-            dbc.Row([
-                dbc.Col(html.H4(header_text, className="mb-3"), xs=12),
-            ]),
-
-            # Row with Refresh button + Date range picker (NEW)
-            dbc.Row([
-                dbc.Col(
-                    dbc.Button("🔄 Refresh Records", id="refresh-btn", color="primary"),
-                    xs=12, sm=5, md=4, className="mb-2"
-                ),
-                dbc.Col(
-                    dcc.DatePickerRange(
-                        id="date-range",
-                        start_date_placeholder_text="Start date",
-                        end_date_placeholder_text="End date",
-                        display_format="YYYY-MM-DD",
-                        minimum_nights=0,
-                        with_portal=False
-                    ),
-                    xs=12, sm=7, md=8, className="mb-2"
-                ),
-            ], className="mb-3 align-items-center"),
-
-            # container for records (cards generated by callback)
-            html.Div(id="records-container")
-        ]),
-        className="shadow-lg border-0 rounded-4",
-        style={"padding": "18px", "backgroundColor": "white"}
-    )
-
-    # Right floating info (small)
     right_info = dbc.Card(
         dbc.CardBody([
             html.H6("Actions", className="fw-bold mb-2"),
@@ -225,7 +192,6 @@ def layout(username=None):
         style={"backgroundColor": "white"}
     )
 
-    # Navbar (logout button on right) — keep the logout-button id
     navbar = dbc.Navbar(
         dbc.Container([
             html.Div(header_text, className="navbar-brand mb-0 h4", style={"color": "white"}),
@@ -236,7 +202,6 @@ def layout(username=None):
         className="mb-4"
     )
 
-    # Compose container: navbar + floating layout
     return dbc.Container([
         navbar,
         dbc.Row(
@@ -250,7 +215,6 @@ def layout(username=None):
         ),
     ], fluid=True, style={
         "minHeight": "100vh",
-        # matching the blueish theme used earlier
         "background": "linear-gradient(135deg, #90caf9 0%, #bbdefb 100%)",
         "paddingTop": "12px",
         "paddingBottom": "40px"
@@ -259,13 +223,13 @@ def layout(username=None):
 
 
 
-# Callbacks (register_patient_callbacks) — IDs & logic preserved
-def register_patient_callbacks(app):
-    """
-    Register callbacks on the provided Dash `app`.
-    Keep all IDs and logic unchanged; UI elements returned are improved styled HTML.
-    """
 
+
+
+
+
+# ---------------- Callbacks ----------------
+def register_patient_callbacks(app):
     @app.callback(
         Output("records-container", "children"),
         Input("refresh-btn", "n_clicks"),
@@ -275,7 +239,6 @@ def register_patient_callbacks(app):
         prevent_initial_call=False
     )
     def display_patient_data(n_clicks, session_data, start_date, end_date):
-        # Determine patient_id from session
         if not session_data or not session_data.get("username"):
             return dbc.Alert("❌ Not logged in. Please login to view records.", color="danger")
 
@@ -288,19 +251,15 @@ def register_patient_callbacks(app):
         if not records:
             return dbc.Alert("⚠️ No records found for this patient.", color="warning")
 
-        # Filter by date range if provided (start_date/end_date are ISO 'YYYY-MM-DD' strings)
         def in_range(record_ts):
             if not (start_date or end_date):
                 return True
             if not record_ts:
                 return True
-            # try parse date-part from timestamp
             try:
-                # accept timestamps like "YYYY-MM-DD" or "YYYY-MM-DD HH:MM:SS"
                 date_part = record_ts.split()[0]
                 rec_date = datetime.strptime(date_part, "%Y-%m-%d").date()
             except Exception:
-                # if parsing fails, include the record (safer)
                 return True
 
             if start_date:
@@ -328,7 +287,6 @@ def register_patient_callbacks(app):
         if not filtered:
             return dbc.Alert("⚠️ No records found in the selected date range.", color="warning")
 
-        # Build responsive grid of record cards
         cols = []
         for record in filtered:
             header = dbc.CardHeader(f"📦 Block #{record['block_index']} — {record['timestamp']}")
@@ -385,6 +343,172 @@ def register_patient_callbacks(app):
     )
     def logout_user(n_clicks):
         if n_clicks:
-            # clear session and navigate to login
             return {}, "/login"
         return dash.no_update, dash.no_update
+
+
+    
+    # ---------- Profile Tab ----------
+    @app.callback(
+        Output("tab-content", "children"),
+        Input("patient-tabs", "value"),
+        State("session-store", "data"),
+        prevent_initial_call=False
+    )
+    def render_tab(tab, session_data):
+        username = session_data.get("username") if session_data else None
+
+        if tab == "data":
+            return dbc.Card(
+                dbc.CardBody([
+                    html.Div(id="patient-id-display"),
+                    dbc.Row([
+                        dbc.Col(
+                            dbc.Button("🔄 Refresh Records", id="refresh-btn", color="primary"),
+                            xs=12, sm=5, md=4, className="mb-2"
+                        ),
+                        dbc.Col(
+                            dcc.DatePickerRange(
+                                id="date-range",
+                                start_date_placeholder_text="Start date",
+                                end_date_placeholder_text="End date",
+                                display_format="YYYY-MM-DD",
+                                minimum_nights=0,
+                                with_portal=False
+                            ),
+                            xs=12, sm=7, md=8, className="mb-2"
+                        ),
+                    ], className="mb-3 align-items-center"),
+                    html.Div(id="records-container")
+                ]),
+                className="shadow-lg border-0 rounded-4",
+                style={"padding": "18px", "backgroundColor": "white"}
+            )
+
+        elif tab == "profile":
+            with open(USERS_FILE, "r") as f:
+                users = json.load(f)
+            u = users.get(username, {})
+
+            # Personal Info
+            personal_section = dbc.Card(
+                dbc.CardBody([
+                    html.H5("👤 Personal Info", className="mb-3 text-primary"),
+                    dbc.Row([
+                        dbc.Col(html.Div([html.Strong("Username:"), html.Div(username)]), md=6),
+                        dbc.Col(html.Div([html.Strong("Patient ID:"), html.Div(u.get("patient_id","NA"))]), md=6),
+                    ], className="mb-2"),
+                    dbc.Row([
+                        dbc.Col(dbc.InputGroup([dbc.InputGroupText("Full Name"), dbc.Input(id="pi-full-name", value=u.get("full_name","NA"))]), md=6),
+                        dbc.Col(dbc.InputGroup([dbc.InputGroupText("Gender"), dbc.Input(id="pi-gender", value=u.get("gender","NA"))]), md=6),
+                    ], className="mb-2"),
+                    dbc.Row([
+                        dbc.Col(
+                            dbc.InputGroup([
+                                dbc.InputGroupText("Date of Birth"),
+                                dbc.Input(
+                                    id="pi-dob",
+                                    type="date",
+                                    value=u.get("date_of_birth", None) if u.get("date_of_birth") != "NA" else None,
+                                    placeholder="Select Date of Birth"
+                                )
+                            ]),
+                            md=6
+                        ),
+                        dbc.Col(
+                            dbc.InputGroup([
+                                dbc.InputGroupText("Blood Group"),
+                                dbc.Input(id="pi-blood", value=u.get("blood_group", "NA"))
+                            ]),
+                            md=6
+                        ),
+                    ], className="mb-2"),
+                    dbc.Row([
+                        dbc.Col(dbc.InputGroup([dbc.InputGroupText("Phone"), dbc.Input(id="pi-phone", value=u.get("phone","NA"))]), md=6),
+                        dbc.Col(dbc.InputGroup([dbc.InputGroupText("Email"), dbc.Input(id="pi-email", value=u.get("email","NA"))]), md=6),
+                    ], className="mb-2"),
+                    dbc.Row([
+                        dbc.Col(dbc.InputGroup([dbc.InputGroupText("Address"), dbc.Input(id="pi-address", value=u.get("address","NA"))]), md=12),
+                    ], className="mb-2"),
+                    dbc.Row([
+                        dbc.Col(dbc.InputGroup([dbc.InputGroupText("Emergency Contact Name"), dbc.Input(id="pi-em-name", value=u.get("emergency_contact_name","NA"))]), md=6),
+                        dbc.Col(dbc.InputGroup([dbc.InputGroupText("Emergency Contact Phone"), dbc.Input(id="pi-em-phone", value=u.get("emergency_contact_phone","NA"))]), md=6),
+                    ], className="mb-2"),
+                    dbc.Button("💾 Save Personal Info", id="save-personal-btn", color="primary")
+                ]),
+                className="mb-4 shadow-sm"
+            )
+
+            # Medical Info
+            medical_section = dbc.Card(
+                dbc.CardBody([
+                    html.H5("🏥 Medical Info", className="mb-3 text-success"),
+                    dbc.Row([
+                        dbc.Col(dbc.Badge(f"Height: {u.get('height','NA')}", color="info", pill=True), md=4),
+                        dbc.Col(dbc.Badge(f"Weight: {u.get('weight','NA')}", color="info", pill=True), md=4),
+                        dbc.Col(dbc.Badge(f"BMI: {u.get('bmi','NA')}", color="info", pill=True), md=4),
+                    ], className="mb-3"),
+                    dbc.Row([
+                        dbc.Col(dbc.Alert(f"Blood Pressure: {u.get('blood_pressure','NA')}", color="secondary"), md=6),
+                        dbc.Col(dbc.Alert(f"Heart Rate: {u.get('heart_rate','NA')}", color="secondary"), md=6),
+                    ], className="mb-3"),
+                    dbc.Row([
+                        dbc.Col(html.Div([html.Strong("Allergies:"), html.Div(u.get("allergies","NA"))]), md=6),
+                        dbc.Col(html.Div([html.Strong("Chronic Conditions:"), html.Div(u.get("chronic_conditions","NA"))]), md=6),
+                    ], className="mb-3"),
+                    dbc.Row([
+                        dbc.Col(html.Div([html.Strong("Current Medications:"), html.Div(u.get("current_medications","NA"))]), md=6),
+                        dbc.Col(html.Div([html.Strong("Past Surgeries:"), html.Div(u.get("past_surgeries","NA"))]), md=6),
+                    ], className="mb-2"),
+                ]),
+                className="shadow-sm border-success",
+                style={"borderLeft": "6px solid #28a745"}
+            )
+
+            return dbc.Card(
+                dbc.CardBody([personal_section, medical_section]),
+                className="shadow-lg border-0 rounded-4",
+                style={"padding": "18px", "backgroundColor": "white"}
+            )
+
+        return dbc.Alert("⚠️ Unknown tab selected.", color="warning")
+
+    
+    # Save personal info
+    @app.callback(
+        Output("save-personal-btn", "children"),
+        Input("save-personal-btn", "n_clicks"),
+        State("session-store", "data"),
+        State("pi-full-name", "value"),
+        State("pi-gender", "value"),
+        State("pi-blood", "value"),
+        State("pi-phone", "value"),
+        State("pi-email", "value"),
+        State("pi-address", "value"),
+        State("pi-em-name", "value"),
+        State("pi-em-phone", "value"),
+        prevent_initial_call=True
+    )
+    def save_personal_info(n_clicks, session_data, full_name, gender, blood_group, phone, email, address, em_name, em_phone):
+        if not session_data or not session_data.get("username"):
+            return "❌ Save Failed"
+        username = session_data["username"]
+
+        try:
+            with open(USERS_FILE, "r") as f:
+                users = json.load(f)
+            if username in users:
+                users[username]["full_name"] = full_name
+                users[username]["gender"] = gender
+                users[username]["blood_group"] = blood_group
+                users[username]["phone"] = phone
+                users[username]["email"] = email
+                users[username]["address"] = address
+                users[username]["emergency_contact_name"] = em_name
+                users[username]["emergency_contact_phone"] = em_phone
+
+                with open(USERS_FILE, "w") as f:
+                    json.dump(users, f, indent=2)
+            return "✅ Saved!"
+        except Exception as e:
+            return f"❌ Error: {e}"

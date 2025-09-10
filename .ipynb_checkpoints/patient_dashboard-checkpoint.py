@@ -481,6 +481,7 @@ def register_patient_callbacks(app):
         State("session-store", "data"),
         State("pi-full-name", "value"),
         State("pi-gender", "value"),
+        State("pi-dob", "value"),
         State("pi-blood", "value"),
         State("pi-phone", "value"),
         State("pi-email", "value"),
@@ -489,7 +490,7 @@ def register_patient_callbacks(app):
         State("pi-em-phone", "value"),
         prevent_initial_call=True
     )
-    def save_personal_info(n_clicks, session_data, full_name, gender, blood_group, phone, email, address, em_name, em_phone):
+    def save_personal_info(n_clicks, session_data, full_name, gender, dob ,blood_group, phone, email, address, em_name, em_phone):
         if not session_data or not session_data.get("username"):
             return "❌ Save Failed"
         username = session_data["username"]
@@ -506,7 +507,7 @@ def register_patient_callbacks(app):
                 users[username]["address"] = address
                 users[username]["emergency_contact_name"] = em_name
                 users[username]["emergency_contact_phone"] = em_phone
-
+                users[username]["date_of_birth"] = dob
                 with open(USERS_FILE, "w") as f:
                     json.dump(users, f, indent=2)
             return "✅ Saved!"

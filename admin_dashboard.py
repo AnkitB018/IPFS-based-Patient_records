@@ -7,7 +7,7 @@ from datetime import datetime
 
 import dash
 from dash import html, dcc
-from dash.dependencies import Input, Output, State, MATCH
+from dash.dependencies import Input, Output, State, MATCH, ALL
 import dash_bootstrap_components as dbc
 import ipfshttpclient
 
@@ -17,6 +17,39 @@ from Blockchain import Blockchain  # your existing blockchain implementation
 # ---------------------
 # Helper functions
 # ---------------------
+USERS_FILE = "users.json"
+
+def load_patients():
+    try:
+        with open(USERS_FILE, "r") as f:
+            users = json.load(f)
+        if isinstance(users, dict):
+            return [
+                {
+                    "label": uname,  # show username in dropdown
+                    "value": u.get("patient_id", uname)  # still keep patient_id as value
+                }
+                for uname, u in users.items()
+                if isinstance(u, dict) and (u.get("full_name") or u.get("patient_id"))
+            ]
+        elif isinstance(users, list):  # fallback if stored as list
+            return [
+                {
+                    "label": u.get("username", "Unknown"),  # show username
+                    "value": u.get("patient_id", u.get("username", ""))  # still use patient_id
+                }
+                for u in users if isinstance(u, dict)
+            ]
+    except Exception as e:
+        print("⚠️ Error loading users.json:", e)
+    return []
+
+
+
+
+patients = load_patients()
+
+
 def fetch_from_ipfs(cid):
     """
     Fetch metadata JSON stored in IPFS under cid and return dash/html layout.
@@ -125,6 +158,11 @@ def render_chain(chain):
     return dbc.Row(cols, className="g-3")
 
 
+
+
+
+
+
 # Layout wrapper function
 def layout(username):
     header = html.Div(
@@ -170,16 +208,36 @@ def layout(username):
             html.Div(id="upload-status", style={"marginBottom": "8px", "fontWeight": "bold", "color": "green"}),
 
             dbc.Row([
-                dbc.Col(dbc.Label("Patient Name", className="small fw-semibold"), md=4),
-                dbc.Col(dbc.Label("Patient ID", className="small fw-semibold"), md=4),
-                dbc.Col(dbc.Label("File Type", className="small fw-semibold"), md=4)
+                dbc.Col([
+                    dbc.Label("Patient Name", className="small fw-semibold"),
+                    dcc.Dropdown(
+                        id="patient-name-dropdown",
+                        options=patients,
+                        placeholder="Select or search patient...",
+                        searchable=True,
+                        clearable=True
+                    )
+                ], md=4),
+            
+                dbc.Col([
+                    dbc.Label("Patient ID", className="small fw-semibold"),
+                    dbc.Input(id="patient-id", type="text", disabled=True)  # auto-filled
+                ], md=4),
+            
+                dbc.Col([
+                    dbc.Label("File Type", className="small fw-semibold"),
+                    dcc.Dropdown(
+                        id="file-type-dropdown",
+                        options=[
+                            {"label": "Medical Report", "value": "report"},
+                            {"label": "Prescription", "value": "prescription"},
+                            {"label": "Scan Image", "value": "scan"},
+                            {"label": "Other", "value": "other"}
+                        ],
+                        placeholder="Select file type..."
+                    )
+                ], md=4)
             ], className="mb-2"),
-
-            dbc.Row([
-                dbc.Col(dcc.Input(id="patient-name", type="text", placeholder="Name of Patient", style={"width": "100%"}), md=4),
-                dbc.Col(dcc.Input(id="patient-id", type="text", placeholder="Patient ID", style={"width": "100%"}), md=4),
-                dbc.Col(dcc.Input(id="file-type", type="text", placeholder="File Type", style={"width": "100%"}), md=4)
-            ], className="mb-3"),
 
             dbc.Row([
                 dbc.Col(dcc.Input(id="description", type="text", placeholder="Summary / Description", style={"width": "100%"}), md=6),
@@ -259,11 +317,43 @@ def layout(username):
         style={"padding": "14px", "borderRadius": "8px", "backgroundColor": "white"}
     )
 
+
+    medical_data_card = dbc.Card(
+        dbc.CardBody([
+            html.H5("🏥 Set Medical data of patient", style={"margin": "10px"}),
+            html.Div("Select a patient to update medical information.", className="small text-muted mb-2", style={"margin": "13px"}),
+            dbc.Row([
+            dbc.Col([
+                dbc.Label("Patient", className="small fw-semibold"),
+                dcc.Dropdown(
+                    id="medical-patient-dropdown",
+                    options=patients,
+                    placeholder="Select patient...",
+                    searchable=True,
+                    clearable=True
+                )
+            ], md=6),
+        ], className="mb-3"),
+
+        html.Br(),
+
+        html.Div(id="medical-form-container"), 
+
+        html.Div(style={"textAlign": "center", "marginTop": "16px"},
+                 children=[dbc.Button("💾 Save Medical Data", id="save-medical-btn", n_clicks=0, color="success")]),
+
+        html.Div(id="medical-save-status", style={"marginTop": "10px", "fontWeight": "bold"})
+        ]),
+        className="shadow-sm",
+        style={"padding": "14px", "borderRadius": "8px", "backgroundColor": "white"}
+    )
+
     tabs = dbc.Tabs(
         [
             dbc.Tab(add_data_card, label="Add Data", tab_id="tab-add"),
             dbc.Tab(view_blocks_card, label="View Blocks", tab_id="tab-view"),
             dbc.Tab(fetch_card, label="Fetch by CID", tab_id="tab-fetch"),
+            dbc.Tab(medical_data_card, label="Set Medical Data", tab_id="tab-medical")
         ],
         active_tab="tab-add",
         className="mb-3"
@@ -284,6 +374,10 @@ def layout(username):
             )
         )
     ], fluid=True, style={"minHeight": "100vh", "background": "linear-gradient(135deg, #e0f7fa 0%, #80deea 100%)", "paddingTop": "12px"})
+
+
+
+
 
 
 # Wrapper function for all the callbacks
@@ -398,9 +492,9 @@ def register_admin_callbacks(app):
         Input("submit-btn", "n_clicks"),
         State("upload-data", "contents"),
         State("upload-data", "filename"),
-        State("patient-name", "value"),
+        State("patient-name-dropdown", "value"),
         State("patient-id", "value"),
-        State("file-type", "value"),
+        State("file-type-dropdown", "value"),
         State("uploader", "value"),
         State("description", "value"),
         State("disease", "value"),
@@ -473,3 +567,155 @@ def register_admin_callbacks(app):
             if os.path.exists("temp_metadata.json"):
                 os.remove("temp_metadata.json")
             return f"❌ Upload failed: {e}"
+
+     
+    @app.callback(
+        Output("patient-id", "value"),
+        Input("patient-name-dropdown", "value")
+    )
+    def update_patient_id(selected_id):
+        if selected_id:
+            return selected_id
+        return ""
+
+
+
+
+    
+    # For setting medical information of patient
+    @app.callback(
+    Output("medical-form-container", "children"),
+    Input("medical-patient-dropdown", "value")
+    )
+    def load_medical_form(patient_id):
+        if not patient_id:
+            return html.Div("⚠️ Please select a patient first.", className="text-muted")
+    
+        # Load users.json
+        try:
+            with open(USERS_FILE, "r") as f:
+                users = json.load(f)
+        except Exception as e:
+            return dbc.Alert(f"Error reading users.json: {e}", color="danger")
+    
+        # Find patient
+        user = None
+        if isinstance(users, dict):
+            for uname, u in users.items():
+                if u.get("patient_id") == patient_id:
+                    user = u
+                    break
+        elif isinstance(users, list):
+            for u in users:
+                if u.get("patient_id") == patient_id:
+                    user = u
+                    break
+    
+        if not user:
+            return dbc.Alert("❌ Patient not found.", color="danger")
+    
+        # Calculate BMI if height and weight exist
+        def calc_bmi(u):
+            try:
+                h = float(u.get("height", 0))
+                w = float(u.get("weight", 0))
+                if h > 0 and w > 0:
+                    return str(round(w / ((h / 100) ** 2), 2))
+            except Exception:
+                pass
+            return u.get("bmi", "NA")
+    
+        # Fields for form
+        fields = [
+            ("gender", "Gender", "text"),
+            ("date_of_birth", "Date of Birth", "text"),
+            ("blood_group", "Blood Group", "text"),
+            ("height", "Height (cm)", "number"),
+            ("weight", "Weight (kg)", "number"),
+            ("bmi", "BMI", "text"),  # auto-calculated, read-only
+            ("blood_pressure", "Blood Pressure", "text"),
+            ("heart_rate", "Heart Rate", "text"),
+            ("allergies", "Allergies", "text"),
+            ("chronic_conditions", "Chronic Conditions", "text"),
+            ("current_medications", "Current Medications", "text"),
+            ("past_surgeries", "Past Surgeries", "text"),
+        ]
+    
+        rows = []
+        for key, label, input_type in fields:
+            value = calc_bmi(user) if key == "bmi" else user.get(key, "NA")
+    
+            rows.append(
+                dbc.Row([
+                    dbc.Col(dbc.Label(label, className="fw-semibold text-secondary"), md=4),
+                    dbc.Col(
+                        dbc.Input(
+                            id={"type": "medical-input", "field": key},
+                            value=value,
+                            type=input_type,
+                            readonly=(key == "bmi"),  # BMI is read-only
+                            style={
+                                "backgroundColor": "#f9f9f9" if key == "bmi" else "white",
+                                "border": "1px solid #ccc",
+                                "borderRadius": "6px",
+                                "padding": "6px 10px"
+                            }
+                        ),
+                        md=8
+                    )
+                ], className="mb-3 align-items-center")
+            )
+    
+        return dbc.Form(rows, style={"padding": "10px"})
+
+
+    # For saving medical information 
+    @app.callback(
+        Output("medical-save-status", "children"),
+        Input("save-medical-btn", "n_clicks"),
+        State("medical-patient-dropdown", "value"),
+        State({"type": "medical-input", "field": ALL}, "value"),
+        State({"type": "medical-input", "field": ALL}, "id"),
+        prevent_initial_call=True
+    )
+    def save_medical_data(n_clicks, patient_id, values, ids):
+        if not patient_id:
+            return "⚠️ Select a patient first."
+
+        try:
+            with open(USERS_FILE, "r") as f:
+                users = json.load(f)
+
+            # map back to dict
+            update_dict = {id["field"]: val for id, val in zip(ids, values)}
+
+            # find and update patient
+            updated = False
+            if isinstance(users, dict):
+                for uname, u in users.items():
+                    if u.get("patient_id") == patient_id:
+                        u.update(update_dict)
+                        u["last_updated"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        updated = True
+                        break
+            elif isinstance(users, list):
+                for u in users:
+                    if u.get("patient_id") == patient_id:
+                        u.update(update_dict)
+                        u["last_updated"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        updated = True
+                        break
+
+            if not updated:
+                return "❌ Patient not found."
+
+            # Save back
+            with open(USERS_FILE, "w") as f:
+                json.dump(users, f, indent=4)
+
+            return "✅ Medical data updated successfully!"
+
+        except Exception as e:
+            return f"❌ Failed to save: {e}"
+
+           

@@ -51,10 +51,6 @@ patients = load_patients()
 
 
 def fetch_from_ipfs(cid):
-    """
-    Fetch metadata JSON stored in IPFS under cid and return dash/html layout.
-    (Same behaviour as before, wrapped in nicer layout.)
-    """
     try:
         client = ipfshttpclient.connect()
         raw_data = client.cat(cid)
@@ -134,6 +130,8 @@ def fetch_from_ipfs(cid):
         return html.Div(f"❌ IPFS Error: {e}", style={"color": "red"})
 
 
+
+        
 def render_chain(chain):
     cols = []
     for block in chain[-10:]:
